@@ -1,7 +1,7 @@
-import sys
 import logging
+import sys
 
-from app.core.settings import settings
+from app.core.config import settings
 
 logger = logging.getLogger()
 logger.setLevel(settings.LOG_LEVEL)
