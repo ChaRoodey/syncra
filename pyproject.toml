@@ -7,18 +7,40 @@ requires-python = ">=3.13"
 dependencies = [
     "alembic>=1.18.5",
     "asyncpg>=0.31.0",
+    "bcrypt>=5.0.0",
     "fastapi>=0.139.2",
-    "pydantic>=2.13.4",
+    "pydantic[email]>=2.13.4",
     "pydantic-settings>=2.14.2",
+    "pyjwt[crypto]>=2.13.0",
     "pytest>=9.1.1",
     "ruff>=0.15.22",
     "sqlalchemy>=2.0.51",
     "uvicorn>=0.51.0",
+    "httpx>=0.28.1",
+    "pytest-asyncio>=1.4.0",
+    "pytest-cov>=7.1.0",
 ]
 
 [tool.ruff]
 line-length = 88
-target-version = "py314"
+target-version = "py313"
 
 [tool.ruff.lint]
 select = ["E", "F", "I"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"
+
+[tool.pytest.ini_options]
+pythonpath = [".", "app"]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
+markers = [
+    "unit: unit tests",
+    "integration: integration tests requiring database or redis",
+    "auth: auth integration tests",
+]

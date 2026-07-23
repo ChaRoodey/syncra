@@ -1,3 +1,7 @@
-.idea
-.venv
+.idea/
+.venv/
+.certs/
+
 .env
+.env.test
+/.coverage
