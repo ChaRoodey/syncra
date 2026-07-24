@@ -1,8 +1,6 @@
 import pytest
 from httpx import AsyncClient
 
-from app.models.user import UserModel
-
 
 @pytest.mark.integration
 @pytest.mark.auth
@@ -83,12 +81,14 @@ class TestAuth:
 
         assert response.status_code == 422
 
-    async def test_login_200(self, client: AsyncClient, user: UserModel):
+    async def test_login_200(self, client: AsyncClient, user_factory):
+        user, password, _ = await user_factory()
+
         response = await client.post(
             f"{self.PREFIX}/login/",
             json={
-                "username": "string",
-                "password": "string",
+                "username": user.username,
+                "password": password,
             },
         )
 

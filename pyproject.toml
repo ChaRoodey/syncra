@@ -43,4 +43,6 @@ markers = [
     "unit: unit tests",
     "integration: integration tests requiring database or redis",
     "auth: auth integration tests",
+    "teams: teams integration tests",
+    "solo: for solo tests",
 ]

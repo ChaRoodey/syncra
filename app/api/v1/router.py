@@ -1,6 +1,15 @@
 from fastapi import APIRouter
 
-from app.api.v1.endpoints import auth, calendar, tasks, teams, users
+from app.api.v1.endpoints import (
+    auth,
+    calendar,
+    task_comments,
+    task_evaluations,
+    team_meetings,
+    team_tasks,
+    teams,
+    users,
+)
 
 router = APIRouter(
     prefix="/api/v1",
@@ -8,6 +17,9 @@ router = APIRouter(
 
 router.include_router(auth.router)
 router.include_router(users.router)
-router.include_router(teams.router)
-router.include_router(tasks.router)
+router.include_router(task_comments.router)
+router.include_router(task_evaluations.router)
+router.include_router(team_tasks.router)
+router.include_router(team_meetings.router)
 router.include_router(calendar.router)
+router.include_router(teams.router)

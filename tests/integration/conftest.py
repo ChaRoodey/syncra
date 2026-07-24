@@ -1,5 +1,10 @@
 import os
 
+from app.core.enums import UserRole
+from app.models.team import TeamModel
+from app.models.team_member import TeamMemberModel
+from app.schemas.team import TeamNameSchema
+
 os.environ["ENV_FILE"] = ".env.test"
 
 from typing import AsyncGenerator
@@ -11,7 +16,7 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from alembic import command
-from app.auth.utils import create_refresh_token, hash_password
+from app.auth.utils import create_access_token, create_refresh_token, hash_password
 from app.db.session import get_db_session
 from app.main import app
 from app.models.user import UserModel
@@ -74,6 +79,64 @@ async def client(
 
 
 @pytest_asyncio.fixture
+async def user_factory(db_session: AsyncSession):
+    async def create_user(
+        role: UserRole = UserRole.USER,
+        username: str = "user",
+        password: str = "password",
+        is_active: bool = True,
+    ) -> (UserModel, str, str):
+        user = UserModel(
+            username=username,
+            email=f"{username}@example.com",
+            first_name="Test",
+            last_name="User",
+            password_hash=hash_password(password),
+            role=role,
+            is_active=is_active,
+        )
+
+        db_session.add(user)
+        await db_session.flush()
+
+        access_token = create_access_token(user.id)
+
+        return user, password, access_token
+
+    return create_user
+
+
+@pytest_asyncio.fixture
+async def team_factory(db_session: AsyncSession):
+    async def create_team(
+        name: str = "team",
+        invite_code: str = "aaaaaaaaaaaaaaaaaaaaaa",
+    ) -> TeamModel:
+        team = TeamModel(name=name, invite_code=invite_code)
+
+        db_session.add(team)
+        await db_session.flush()
+        return team
+
+    return create_team
+
+
+@pytest_asyncio.fixture
+async def team_member_factory(db_session: AsyncSession):
+    async def create_team_member(
+        team_id: int,
+        user_id: int,
+    ) -> TeamMemberModel:
+        team_member = TeamMemberModel(team_id=team_id, user_id=user_id)
+
+        db_session.add(team_member)
+        await db_session.flush()
+        return team_member
+
+    return create_team_member
+
+
+@pytest_asyncio.fixture
 async def user(db_session: AsyncSession) -> UserModel:
     user = UserModel(
         username="string",
@@ -81,7 +144,7 @@ async def user(db_session: AsyncSession) -> UserModel:
         first_name="John",
         last_name="Doe",
         password_hash=hash_password("string"),
-        role_id=1,
+        role=UserRole.USER,
         is_active=True,
     )
 
@@ -94,3 +157,8 @@ async def user(db_session: AsyncSession) -> UserModel:
 @pytest.fixture
 def refresh_token(user: UserModel) -> str:
     return create_refresh_token(user.id)
+
+
+@pytest.fixture
+def team_name_payload() -> TeamNameSchema:
+    return TeamNameSchema(name="team")

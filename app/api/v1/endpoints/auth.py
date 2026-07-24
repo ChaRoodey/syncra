@@ -2,7 +2,7 @@ from fastapi import APIRouter, Cookie, Depends, HTTPException, Response
 from starlette import status
 
 from app.api.v1.deps import get_auth_service
-from app.scheams.user import LoginSchema, RegisterSchema
+from app.schemas.user import LoginSchema, RegisterSchema
 from app.services.auth import AuthService
 
 router = APIRouter(

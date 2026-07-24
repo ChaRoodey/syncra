@@ -6,7 +6,7 @@ from jwt import InvalidTokenError
 from pydantic import ValidationError
 
 from app.core.config import settings
-from app.scheams.token import TokenPayload
+from app.schemas.token import TokenPayload
 
 
 def encode_jwt(

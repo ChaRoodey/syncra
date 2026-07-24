@@ -12,8 +12,8 @@ from app.auth.utils import (
 )
 from app.models.user import UserModel
 from app.repositories.user import UserRepository
-from app.scheams.token import TokenPair
-from app.scheams.user import LoginSchema, RegisterSchema
+from app.schemas.token import TokenPair
+from app.schemas.user import LoginSchema, RegisterSchema
 
 logger = logging.getLogger(__name__)
 
