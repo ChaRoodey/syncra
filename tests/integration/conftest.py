@@ -1,13 +1,20 @@
 import os
+from datetime import datetime, timedelta
 
-from app.core.enums import UserRole
+from app.core.enums import TaskStatus, UserRole
+from app.models.base import Base
+from app.models.comment import TaskCommentModel
+from app.models.evaluation import EvaluationModel
+from app.models.meeting import MeetingModel
+from app.models.task import TaskModel
 from app.models.team import TeamModel
 from app.models.team_member import TeamMemberModel
+from app.schemas.task import TaskCreateSchema, TaskUpdateSchema
 from app.schemas.team import TeamNameSchema
 
 os.environ["ENV_FILE"] = ".env.test"
 
-from typing import AsyncGenerator
+from typing import AsyncGenerator, TypeVar
 
 import pytest
 import pytest_asyncio
@@ -25,6 +32,8 @@ TEST_DATABASE_URL = "postgresql+asyncpg://syncra_test_user:syncra_test_password@
 
 engine_test = create_async_engine(TEST_DATABASE_URL, echo=False)
 SessionTest = async_sessionmaker(engine_test, expire_on_commit=False)
+
+EntityT = TypeVar("EntityT", bound=Base)
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -78,8 +87,20 @@ async def client(
     app.dependency_overrides.clear()
 
 
+def entity_factory(db_session: AsyncSession):
+    async def add_entity_to_db(entity: EntityT) -> EntityT:
+        db_session.add(entity)
+        await db_session.flush()
+
+        return entity
+
+    return add_entity_to_db
+
+
 @pytest_asyncio.fixture
 async def user_factory(db_session: AsyncSession):
+    add_entity = entity_factory(db_session)
+
     async def create_user(
         role: UserRole = UserRole.USER,
         username: str = "user",
@@ -96,8 +117,7 @@ async def user_factory(db_session: AsyncSession):
             is_active=is_active,
         )
 
-        db_session.add(user)
-        await db_session.flush()
+        user = await add_entity(user)
 
         access_token = create_access_token(user.id)
 
@@ -108,36 +128,132 @@ async def user_factory(db_session: AsyncSession):
 
 @pytest_asyncio.fixture
 async def team_factory(db_session: AsyncSession):
+    add_entity = entity_factory(db_session)
+
     async def create_team(
         name: str = "team",
         invite_code: str = "aaaaaaaaaaaaaaaaaaaaaa",
     ) -> TeamModel:
         team = TeamModel(name=name, invite_code=invite_code)
 
-        db_session.add(team)
-        await db_session.flush()
-        return team
+        return await add_entity(team)
 
     return create_team
 
 
 @pytest_asyncio.fixture
 async def team_member_factory(db_session: AsyncSession):
+    add_entity = entity_factory(db_session)
+
     async def create_team_member(
         team_id: int,
         user_id: int,
     ) -> TeamMemberModel:
         team_member = TeamMemberModel(team_id=team_id, user_id=user_id)
 
-        db_session.add(team_member)
-        await db_session.flush()
-        return team_member
+        return await add_entity(team_member)
 
     return create_team_member
 
 
 @pytest_asyncio.fixture
-async def user(db_session: AsyncSession) -> UserModel:
+async def task_factory(db_session: AsyncSession):
+    add_entity = entity_factory(db_session)
+
+    async def create_task(
+        title: str = "task",
+        description: str = "description",
+        assignee_id: int = 1,
+        team_id: int = 1,
+        status: TaskStatus = TaskStatus.OPEN,
+        due_date: datetime = datetime.now() + timedelta(days=1),
+    ) -> TaskModel:
+        task = TaskModel(
+            title=title,
+            description=description,
+            assignee_id=assignee_id,
+            team_id=team_id,
+            status=status,
+            due_date=due_date,
+        )
+
+        return await add_entity(task)
+
+    return create_task
+
+
+@pytest_asyncio.fixture
+async def meeting_factory(db_session: AsyncSession):
+    add_entity = entity_factory(db_session)
+
+    async def create_meeting() -> MeetingModel:
+        meeting = MeetingModel(...)
+
+        db_session.add(meeting)
+        await db_session.flush()
+        return meeting
+
+    return create_meeting
+
+
+@pytest_asyncio.fixture
+async def comment_factory(db_session: AsyncSession):
+    add_entity = entity_factory(db_session)
+
+    async def create_task_comment() -> TaskCommentModel:
+        task_comment = TaskCommentModel(...)
+
+        return await add_entity(task_comment)
+
+    return create_task_comment
+
+
+@pytest_asyncio.fixture
+async def evaluation_factory(db_session: AsyncSession):
+    add_entity = entity_factory(db_session)
+
+    async def create_evaluation() -> EvaluationModel:
+        evaluation = EvaluationModel(...)
+
+        return await add_entity(evaluation)
+
+    return create_evaluation
+
+
+@pytest_asyncio.fixture
+async def factory(
+    user_factory,
+    team_factory,
+    team_member_factory,
+    task_factory,
+    meeting_factory,
+    comment_factory,
+    evaluation_factory,
+):
+    class Factory:
+        def __init__(self):
+            self.user = user_factory
+            self.team = team_factory
+            self.team_member = team_member_factory
+            self.task = task_factory
+            self.meeting = meeting_factory
+            self.comment = comment_factory
+            self.evaluation = evaluation_factory
+
+        async def manager_with_team(self):
+            manager, _, token = await self.user(role=UserRole.MANAGER)
+
+            team = await self.team()
+
+            await self.team_member(team.id, manager.id)
+
+            return manager, team, token
+
+    return Factory()
+
+
+@pytest_asyncio.fixture
+async def user_model(db_session: AsyncSession) -> UserModel:
     user = UserModel(
         username="string",
         email="user@example.com",
@@ -155,10 +271,30 @@ async def user(db_session: AsyncSession) -> UserModel:
 
 
 @pytest.fixture
-def refresh_token(user: UserModel) -> str:
-    return create_refresh_token(user.id)
+def refresh_token(user_model: UserModel) -> str:
+    return create_refresh_token(user_model.id)
 
 
 @pytest.fixture
 def team_name_payload() -> TeamNameSchema:
     return TeamNameSchema(name="team")
+
+
+@pytest.fixture
+def task_create_payload() -> TaskCreateSchema:
+    return TaskCreateSchema(
+        title="task",
+        description="description",
+        due_date=datetime.now() + timedelta(days=1),
+    )
+
+
+@pytest.fixture
+def task_update_payload() -> TaskUpdateSchema:
+    return TaskUpdateSchema(
+        title="task1",
+        description="description1",
+        due_date=datetime.now() + timedelta(days=1),
+        assignee_id=2,
+        status=TaskStatus.IN_PROGRESS,
+    )

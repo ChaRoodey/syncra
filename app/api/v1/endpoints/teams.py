@@ -1,5 +1,4 @@
-from fastapi import APIRouter, Depends
-from starlette import status
+from fastapi import APIRouter, Depends, status
 
 from app.api.v1.deps import get_current_auth_user, get_team_service, require_manager
 from app.models.user import UserModel
@@ -12,7 +11,7 @@ router = APIRouter(
 )
 
 
-@router.post("/", status_code=status.HTTP_201_CREATED, response_model=TeamSchema)
+@router.post("", status_code=status.HTTP_201_CREATED, response_model=TeamSchema)
 async def create_team(
     data: TeamNameSchema,
     service: TeamService = Depends(get_team_service),

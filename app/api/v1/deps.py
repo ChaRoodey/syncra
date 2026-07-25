@@ -7,10 +7,14 @@ from app.auth.utils import decode_jwt
 from app.core.enums import UserRole
 from app.db.session import get_db_session
 from app.models.user import UserModel
+from app.repositories.task import TaskRepository
 from app.repositories.team import TeamRepository
 from app.repositories.user import UserRepository
 from app.schemas.token import TokenPayload
 from app.services.auth import AuthService
+from app.services.permissions.task import TaskPermissionService
+from app.services.permissions.team import TeamPermissionService
+from app.services.task import TaskService
 from app.services.team import TeamService
 
 bearer_scheme = HTTPBearer(auto_error=False)
@@ -28,6 +32,24 @@ async def get_team_repository(
     return TeamRepository(session)
 
 
+async def get_task_repository(
+    session: AsyncSession = Depends(get_db_session),
+) -> TaskRepository:
+    return TaskRepository(session)
+
+
+async def get_task_permission_service(
+    task_repo: TaskRepository = Depends(get_task_repository),
+) -> TaskPermissionService:
+    return TaskPermissionService(task_repo)
+
+
+async def get_team_permission_service(
+    team_repo: TeamRepository = Depends(get_team_repository),
+) -> TeamPermissionService:
+    return TeamPermissionService(team_repo)
+
+
 async def get_auth_service(
     repo: UserRepository = Depends(get_user_repository),
 ) -> AuthService:
@@ -35,9 +57,24 @@ async def get_auth_service(
 
 
 async def get_team_service(
-    repo: TeamRepository = Depends(get_team_repository),
+    team_repo: TeamRepository = Depends(get_team_repository),
+    team_permission: TeamPermissionService = Depends(get_team_permission_service),
 ) -> TeamService:
-    return TeamService(repo)
+    return TeamService(team_repo, team_permission)
+
+
+async def get_task_service(
+    task_repo: TaskRepository = Depends(get_task_repository),
+    team_repo: TeamRepository = Depends(get_team_repository),
+    team_permission: TeamPermissionService = Depends(get_team_permission_service),
+    task_permission: TaskPermissionService = Depends(get_task_permission_service),
+) -> TaskService:
+    return TaskService(
+        task_repo,
+        team_repo,
+        team_permission,
+        task_permission,
+    )
 
 
 async def get_current_auth_user(

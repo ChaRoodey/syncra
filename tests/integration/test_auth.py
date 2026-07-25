@@ -81,8 +81,8 @@ class TestAuth:
 
         assert response.status_code == 422
 
-    async def test_login_200(self, client: AsyncClient, user_factory):
-        user, password, _ = await user_factory()
+    async def test_login_200(self, client: AsyncClient, factory):
+        user, password, _ = await factory.user()
 
         response = await client.post(
             f"{self.PREFIX}/login/",
