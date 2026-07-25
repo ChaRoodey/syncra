@@ -7,11 +7,14 @@ from app.auth.utils import decode_jwt
 from app.core.enums import UserRole
 from app.db.session import get_db_session
 from app.models.user import UserModel
+from app.repositories.meeting import MeetingRepository
 from app.repositories.task import TaskRepository
 from app.repositories.team import TeamRepository
 from app.repositories.user import UserRepository
 from app.schemas.token import TokenPayload
 from app.services.auth import AuthService
+from app.services.meeting import MeetingService
+from app.services.permissions.meeting import MeetingPermissionService
 from app.services.permissions.task import TaskPermissionService
 from app.services.permissions.team import TeamPermissionService
 from app.services.task import TaskService
@@ -38,6 +41,12 @@ async def get_task_repository(
     return TaskRepository(session)
 
 
+async def get_meeting_repository(
+    session: AsyncSession = Depends(get_db_session),
+) -> MeetingRepository:
+    return MeetingRepository(session)
+
+
 async def get_task_permission_service(
     task_repo: TaskRepository = Depends(get_task_repository),
 ) -> TaskPermissionService:
@@ -48,6 +57,12 @@ async def get_team_permission_service(
     team_repo: TeamRepository = Depends(get_team_repository),
 ) -> TeamPermissionService:
     return TeamPermissionService(team_repo)
+
+
+async def get_meeting_permission_service(
+    meeting_repo: MeetingRepository = Depends(get_meeting_repository),
+) -> MeetingPermissionService:
+    return MeetingPermissionService(meeting_repo)
 
 
 async def get_auth_service(
@@ -74,6 +89,24 @@ async def get_task_service(
         team_repo,
         team_permission,
         task_permission,
+    )
+
+
+async def get_meeting_service(
+    user_repo: UserRepository = Depends(get_user_repository),
+    team_repo: TeamRepository = Depends(get_team_repository),
+    meeting_repo: MeetingRepository = Depends(get_meeting_repository),
+    team_permission: TeamPermissionService = Depends(get_team_permission_service),
+    meeting_permission: MeetingPermissionService = Depends(
+        get_meeting_permission_service
+    ),
+) -> MeetingService:
+    return MeetingService(
+        user_repo,
+        team_repo,
+        meeting_repo,
+        team_permission,
+        meeting_permission,
     )
 
 

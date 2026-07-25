@@ -1,14 +1,16 @@
 import os
 from datetime import datetime, timedelta
 
-from app.core.enums import TaskStatus, UserRole
+from app.core.enums import MeetingStatus, TaskStatus, UserRole
 from app.models.base import Base
 from app.models.comment import TaskCommentModel
 from app.models.evaluation import EvaluationModel
 from app.models.meeting import MeetingModel
+from app.models.meeting_participant import MeetingParticipantModel
 from app.models.task import TaskModel
 from app.models.team import TeamModel
 from app.models.team_member import TeamMemberModel
+from app.schemas.meeting import MeetingCreateSchema, MeetingUpdateSchema
 from app.schemas.task import TaskCreateSchema, TaskUpdateSchema
 from app.schemas.team import TeamNameSchema
 
@@ -186,14 +188,43 @@ async def task_factory(db_session: AsyncSession):
 async def meeting_factory(db_session: AsyncSession):
     add_entity = entity_factory(db_session)
 
-    async def create_meeting() -> MeetingModel:
-        meeting = MeetingModel(...)
+    async def create_meeting(
+        team_id: int = 1,
+        author_id: int = 1,
+        title: str = "meeting",
+        starts_at: datetime = datetime.now() + timedelta(days=1),
+        ends_at: datetime = datetime.now() + timedelta(days=1, hours=1),
+    ) -> MeetingModel:
+        meeting = MeetingModel(
+            team_id=team_id,
+            author_id=author_id,
+            title=title,
+            starts_at=starts_at,
+            ends_at=ends_at,
+        )
 
         db_session.add(meeting)
         await db_session.flush()
         return meeting
 
     return create_meeting
+
+
+@pytest_asyncio.fixture
+async def meeting_participant_factory(db_session: AsyncSession):
+    add_entity = entity_factory(db_session)
+
+    async def create_meeting_participant(
+        meeting_id: int,
+        user_id: int,
+    ) -> MeetingParticipantModel:
+        meeting_participant = MeetingParticipantModel(
+            meeting_id=meeting_id, user_id=user_id
+        )
+
+        return await add_entity(meeting_participant)
+
+    return create_meeting_participant
 
 
 @pytest_asyncio.fixture
@@ -227,6 +258,7 @@ async def factory(
     team_member_factory,
     task_factory,
     meeting_factory,
+    meeting_participant_factory,
     comment_factory,
     evaluation_factory,
 ):
@@ -237,6 +269,7 @@ async def factory(
             self.team_member = team_member_factory
             self.task = task_factory
             self.meeting = meeting_factory
+            self.meeting_participant = meeting_participant_factory
             self.comment = comment_factory
             self.evaluation = evaluation_factory
 
@@ -297,4 +330,23 @@ def task_update_payload() -> TaskUpdateSchema:
         due_date=datetime.now() + timedelta(days=1),
         assignee_id=2,
         status=TaskStatus.IN_PROGRESS,
+    )
+
+
+@pytest.fixture
+def meeting_create_payload() -> MeetingCreateSchema:
+    return MeetingCreateSchema(
+        title="task",
+        starts_at=datetime.now() + timedelta(days=1),
+        ends_at=datetime.now() + timedelta(days=1, hours=1),
+    )
+
+
+@pytest.fixture
+def meeting_update_payload() -> MeetingUpdateSchema:
+    return MeetingUpdateSchema(
+        title="task",
+        status=MeetingStatus.SCHEDULED,
+        starts_at=datetime.now() + timedelta(days=1),
+        ends_at=datetime.now() + timedelta(days=1, hours=1),
     )

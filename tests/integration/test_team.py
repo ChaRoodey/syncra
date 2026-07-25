@@ -196,7 +196,7 @@ class TestTeams:
         assert response.status_code == 403
 
         data = response.json()
-        assert data["detail"] == "User are not team member"
+        assert data["detail"] == "User are not a team member"
 
     async def test_remove_team_member_403_role_is_user(
         self, client: AsyncClient, factory

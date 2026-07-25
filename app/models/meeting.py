@@ -15,6 +15,7 @@ class MeetingModel(Base):
         ForeignKey("team.id", ondelete="CASCADE"), index=True
     )
     author_id: Mapped[int] = mapped_column(ForeignKey("user.id"), index=True)
+    title: Mapped[str]
     status: Mapped[MeetingStatus] = mapped_column(
         Enum(MeetingStatus, native_enum=False),
         default=MeetingStatus.SCHEDULED,

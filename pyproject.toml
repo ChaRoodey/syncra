@@ -24,6 +24,9 @@ dependencies = [
 [tool.ruff]
 line-length = 88
 target-version = "py313"
+exclude = [
+    "alembic",
+]
 
 [tool.ruff.lint]
 select = ["E", "F", "I"]
@@ -45,5 +48,6 @@ markers = [
     "auth: auth integration tests",
     "teams: teams integration tests",
     "tasks: tasks integration tests",
+    "meetings: meetings integration tests",
     "solo: for solo tests",
 ]

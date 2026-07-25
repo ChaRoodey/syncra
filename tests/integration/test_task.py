@@ -136,7 +136,7 @@ class TestTasks:
         assert response.status_code == 403
 
         data = response.json()
-        assert data["detail"] == "User are not team member"
+        assert data["detail"] == "User are not a team member"
 
     async def test_create_task_404(
         self, client, factory, task_create_payload: TaskCreateSchema
@@ -208,7 +208,7 @@ class TestTasks:
         assert response.status_code == 403
 
         data = response.json()
-        assert data["detail"] == "User are not team member"
+        assert data["detail"] == "User are not a team member"
 
     async def test_get_task_404(self, client, factory):
         user, _, access_token = await factory.user(UserRole.MANAGER)
@@ -299,7 +299,7 @@ class TestTasks:
         assert response.status_code == 403
 
         data = response.json()
-        assert data["detail"] == "User are not team member"
+        assert data["detail"] == "User are not a team member"
 
     async def test_update_task_404(self, client, factory, task_update_payload):
         user, _, access_token = await factory.user(UserRole.MANAGER)
@@ -374,7 +374,7 @@ class TestTasks:
         assert response.status_code == 403
 
         data = response.json()
-        assert data["detail"] == "User are not team member"
+        assert data["detail"] == "User are not a team member"
 
     async def test_delete_task_404(self, client, factory):
         user, _, access_token = await factory.user(role=UserRole.MANAGER)

@@ -11,7 +11,7 @@ class TeamPermissionService:
         if not await self.team_repo.is_member(team_id, user_id):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="User are not team member",
+                detail="User are not a team member",
             )
 
     async def require_team(self, team_id: int) -> None:
