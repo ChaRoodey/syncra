@@ -1,21 +1,8 @@
 import os
-from datetime import datetime, timedelta
-
-from app.core.enums import MeetingStatus, TaskStatus, UserRole
-from app.models.base import Base
-from app.models.comment import TaskCommentModel
-from app.models.evaluation import EvaluationModel
-from app.models.meeting import MeetingModel
-from app.models.meeting_participant import MeetingParticipantModel
-from app.models.task import TaskModel
-from app.models.team import TeamModel
-from app.models.team_member import TeamMemberModel
-from app.schemas.meeting import MeetingCreateSchema, MeetingUpdateSchema
-from app.schemas.task import TaskCreateSchema, TaskUpdateSchema
-from app.schemas.team import TeamNameSchema
 
 os.environ["ENV_FILE"] = ".env.test"
 
+from datetime import datetime, timedelta
 from typing import AsyncGenerator, TypeVar
 
 import pytest
@@ -26,9 +13,22 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 from alembic import command
 from app.auth.utils import create_access_token, create_refresh_token, hash_password
+from app.core.enums import MeetingStatus, TaskStatus, UserRole
 from app.db.session import get_db_session
 from app.main import app
+from app.models.base import Base
+from app.models.evaluation import EvaluationModel
+from app.models.meeting import MeetingModel
+from app.models.meeting_participant import MeetingParticipantModel
+from app.models.task import TaskModel
+from app.models.task_comment import TaskCommentModel
+from app.models.team import TeamModel
+from app.models.team_member import TeamMemberModel
 from app.models.user import UserModel
+from app.schemas.meeting import MeetingCreateSchema, MeetingUpdateSchema
+from app.schemas.task import TaskCreateSchema, TaskUpdateSchema
+from app.schemas.task_comment import TaskCommentCreateSchema, TaskCommentUpdateSchema
+from app.schemas.team import TeamNameSchema
 
 TEST_DATABASE_URL = "postgresql+asyncpg://syncra_test_user:syncra_test_password@localhost:5533/syncra_test_db"
 
@@ -231,8 +231,16 @@ async def meeting_participant_factory(db_session: AsyncSession):
 async def comment_factory(db_session: AsyncSession):
     add_entity = entity_factory(db_session)
 
-    async def create_task_comment() -> TaskCommentModel:
-        task_comment = TaskCommentModel(...)
+    async def create_task_comment(
+        task_id: int,
+        author_id: int,
+        text: str = "comment",
+    ) -> TaskCommentModel:
+        task_comment = TaskCommentModel(
+            task_id=task_id,
+            author_id=author_id,
+            text=text,
+        )
 
         return await add_entity(task_comment)
 
@@ -273,14 +281,48 @@ async def factory(
             self.comment = comment_factory
             self.evaluation = evaluation_factory
 
-        async def manager_with_team(self):
-            manager, _, token = await self.user(role=UserRole.MANAGER)
+        async def user_team_membership(
+            self,
+            curr_user_role: UserRole = UserRole.USER,
+        ):
+            user, _, token = await self.user(role=curr_user_role)
+            team = await self.team()
+            await self.team_member(team.id, user.id)
+            return user, team, token
+
+        async def user_team_membership_task(self, *args, **kwargs):
+            user, team, token = await self.user_team_membership(*args, **kwargs)
+
+            task = await self.task(
+                team_id=team.id,
+                assignee_id=user.id,
+            )
+
+            return user, team, token, task
+
+        async def manager_team_member(self):
+            curr_user, _, token = await self.user(role=UserRole.MANAGER)
+            member, _, _ = await self.user(
+                username="user1",
+                role=UserRole.USER,
+            )
 
             team = await self.team()
 
-            await self.team_member(team.id, manager.id)
+            await self.team_member(team.id, curr_user.id)
+            await self.team_member(team.id, member.id)
 
-            return manager, team, token
+            return curr_user, member, team, token
+
+        async def manager_team_member_task(self):
+            curr_user, member, team, token = await self.manager_team_member()
+
+            task = await self.task(
+                team_id=team.id,
+                assignee_id=curr_user.id,
+            )
+
+            return curr_user, member, team, token, task
 
     return Factory()
 
@@ -350,3 +392,13 @@ def meeting_update_payload() -> MeetingUpdateSchema:
         starts_at=datetime.now() + timedelta(days=1),
         ends_at=datetime.now() + timedelta(days=1, hours=1),
     )
+
+
+@pytest.fixture
+def task_comment_create_payload() -> TaskCommentCreateSchema:
+    return TaskCommentCreateSchema(text="comment")
+
+
+@pytest.fixture
+def task_comment_update_payload() -> TaskCommentUpdateSchema:
+    return TaskCommentUpdateSchema(text="comment")

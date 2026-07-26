@@ -17,7 +17,7 @@ router = APIRouter(
 
 router.include_router(auth.router)
 router.include_router(users.router)
-router.include_router(task_comments.router)
+router.include_router(task_comments.router_comments)
 router.include_router(task_evaluations.router)
 router.include_router(team_tasks.router_tasks)
 router.include_router(team_meetings.router_meeting)

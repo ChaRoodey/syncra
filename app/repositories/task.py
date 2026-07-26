@@ -25,6 +25,11 @@ class TaskRepository:
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
 
+    async def get_task_by_id_without_team(self, task_id: int) -> TaskModel | None:
+        stmt = select(TaskModel).where(TaskModel.id == task_id)
+        result = await self.session.execute(stmt)
+        return result.scalar_one_or_none()
+
     async def get_all_tasks(self, team_id: int) -> list[TaskModel] | None:
         stmt = select(TaskModel).where(TaskModel.team_id == team_id)
         result = await self.session.execute(stmt)

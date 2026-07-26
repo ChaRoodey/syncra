@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 from alembic import context
 from app.core.config import settings
 from app.models.base import Base
-from app.models.comment import TaskCommentModel
+from app.models.task_comment import TaskCommentModel
 from app.models.evaluation import EvaluationModel
 from app.models.meeting import MeetingModel
 from app.models.meeting_participant import MeetingParticipantModel

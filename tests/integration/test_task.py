@@ -12,9 +12,7 @@ class TestTasks:
     async def test_get_all_tasks_200(self, client, factory):
         tasks_amount = 3
 
-        user, _, access_token = await factory.user()
-        team = await factory.team()
-        await factory.team_member(team.id, user.id)
+        user, team, access_token = await factory.user_team_membership()
 
         tasks = []
 
@@ -81,9 +79,7 @@ class TestTasks:
     async def test_create_task_201(
         self, client, factory, task_create_payload: TaskCreateSchema
     ):
-        user, _, access_token = await factory.user(UserRole.MANAGER)
-        team = await factory.team()
-        await factory.team_member(team.id, user.id)
+        user, team, access_token = await factory.user_team_membership(UserRole.MANAGER)
 
         response = await client.post(
             f"{self.PREFIX}/{team.id}/tasks",
@@ -168,9 +164,7 @@ class TestTasks:
         assert response.status_code == 422
 
     async def test_get_task_200(self, client, factory):
-        user, _, access_token = await factory.user()
-        team = await factory.team()
-        await factory.team_member(team.id, user.id)
+        user, team, access_token = await factory.user_team_membership()
 
         task = await factory.task(
             team_id=team.id,
@@ -211,9 +205,8 @@ class TestTasks:
         assert data["detail"] == "User are not a team member"
 
     async def test_get_task_404(self, client, factory):
-        user, _, access_token = await factory.user(UserRole.MANAGER)
-        team = await factory.team()
-        await factory.team_member(team.id, user.id)
+        user, team, access_token = await factory.user_team_membership(UserRole.MANAGER)
+
         response = await client.get(
             f"{self.PREFIX}/{team.id}/tasks/{0}",
             headers={"Authorization": f"Bearer {access_token}"},
@@ -233,18 +226,9 @@ class TestTasks:
     async def test_update_task_200(
         self, client, factory, task_update_payload: TaskUpdateSchema
     ):
-        user, _, access_token = await factory.user(UserRole.MANAGER)
-        assignee, _, _ = await factory.user(role=UserRole.USER, username="user1")
-        team = await factory.team()
-        await factory.team_member(team.id, user.id)
-        await factory.team_member(team.id, assignee.id)
+        _, member, team, access_token, task = await factory.manager_team_member_task()
 
-        task = await factory.task(
-            team_id=team.id,
-            assignee_id=user.id,
-        )
-
-        task_update_payload.assignee_id = assignee.id
+        task_update_payload.assignee_id = member.id
 
         response = await client.patch(
             f"{self.PREFIX}/{team.id}/tasks/{task.id}",
@@ -257,7 +241,7 @@ class TestTasks:
         data = response.json()
 
         assert data.get("id") == task.id
-        assert data.get("assignee_id") == assignee.id
+        assert data.get("assignee_id") == member.id
         assert data.get("title") == task_update_payload.title
         assert data.get("description") == task_update_payload.description
         assert data.get("status") == task_update_payload.status
@@ -302,9 +286,8 @@ class TestTasks:
         assert data["detail"] == "User are not a team member"
 
     async def test_update_task_404(self, client, factory, task_update_payload):
-        user, _, access_token = await factory.user(UserRole.MANAGER)
-        team = await factory.team()
-        await factory.team_member(team.id, user.id)
+        user, team, access_token = await factory.user_team_membership(UserRole.MANAGER)
+
         response = await client.patch(
             f"{self.PREFIX}/{team.id}/tasks/{1}",
             json=task_update_payload.model_dump(mode="json"),
@@ -328,13 +311,8 @@ class TestTasks:
         assert response.status_code == 422
 
     async def test_delete_task_204(self, client, factory):
-        user, _, access_token = await factory.user(role=UserRole.MANAGER)
-        team = await factory.team()
-        await factory.team_member(team.id, user.id)
-
-        task = await factory.task(
-            team_id=team.id,
-            assignee_id=user.id,
+        user, team, access_token, task = await factory.user_team_membership_task(
+            UserRole.MANAGER
         )
 
         response = await client.delete(
@@ -377,9 +355,7 @@ class TestTasks:
         assert data["detail"] == "User are not a team member"
 
     async def test_delete_task_404(self, client, factory):
-        user, _, access_token = await factory.user(role=UserRole.MANAGER)
-        team = await factory.team()
-        await factory.team_member(team.id, user.id)
+        user, team, access_token = await factory.user_team_membership(UserRole.MANAGER)
 
         response = await client.delete(
             f"{self.PREFIX}/{team.id}/tasks/{0}",

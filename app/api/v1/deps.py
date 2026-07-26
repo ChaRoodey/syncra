@@ -9,6 +9,7 @@ from app.db.session import get_db_session
 from app.models.user import UserModel
 from app.repositories.meeting import MeetingRepository
 from app.repositories.task import TaskRepository
+from app.repositories.task_comment import TaskCommentRepository
 from app.repositories.team import TeamRepository
 from app.repositories.user import UserRepository
 from app.schemas.token import TokenPayload
@@ -16,8 +17,10 @@ from app.services.auth import AuthService
 from app.services.meeting import MeetingService
 from app.services.permissions.meeting import MeetingPermissionService
 from app.services.permissions.task import TaskPermissionService
+from app.services.permissions.task_comment import TaskCommentPermissionService
 from app.services.permissions.team import TeamPermissionService
 from app.services.task import TaskService
+from app.services.task_comment import TaskCommentService
 from app.services.team import TeamService
 
 bearer_scheme = HTTPBearer(auto_error=False)
@@ -47,6 +50,12 @@ async def get_meeting_repository(
     return MeetingRepository(session)
 
 
+async def get_task_comment_repository(
+    session: AsyncSession = Depends(get_db_session),
+) -> TaskCommentRepository:
+    return TaskCommentRepository(session)
+
+
 async def get_task_permission_service(
     task_repo: TaskRepository = Depends(get_task_repository),
 ) -> TaskPermissionService:
@@ -63,6 +72,12 @@ async def get_meeting_permission_service(
     meeting_repo: MeetingRepository = Depends(get_meeting_repository),
 ) -> MeetingPermissionService:
     return MeetingPermissionService(meeting_repo)
+
+
+async def get_task_comment_permission_service(
+    task_comment_repo: TaskCommentRepository = Depends(get_task_comment_repository),
+) -> TaskCommentPermissionService:
+    return TaskCommentPermissionService(task_comment_repo)
 
 
 async def get_auth_service(
@@ -107,6 +122,22 @@ async def get_meeting_service(
         meeting_repo,
         team_permission,
         meeting_permission,
+    )
+
+
+async def get_task_comment_service(
+    task_comment_repo: TaskCommentRepository = Depends(get_task_comment_repository),
+    team_permission: TeamPermissionService = Depends(get_team_permission_service),
+    task_permission: TaskPermissionService = Depends(get_task_permission_service),
+    task_comment_permission: TaskCommentPermissionService = Depends(
+        get_task_comment_permission_service
+    ),
+) -> TaskCommentService:
+    return TaskCommentService(
+        task_comment_repo,
+        team_permission,
+        task_permission,
+        task_comment_permission,
     )
 
 
