@@ -1,13 +1,20 @@
 import pytest
+from httpx import AsyncClient
 
 from app.core.enums import TaskStatus, UserRole
-from app.schemas.task import TaskCreateSchema, TaskUpdateSchema
+from app.schemas.task import (
+    EvaluationCreateSchema,
+    EvaluationUpdateSchema,
+    TaskCreateSchema,
+    TaskUpdateSchema,
+)
 
 
 @pytest.mark.integration
 @pytest.mark.tasks
 class TestTasks:
     PREFIX = "/api/v1/teams"
+    PREFIX_EVALUATION = "/api/v1/tasks"
 
     async def test_get_all_tasks_200(self, client, factory):
         tasks_amount = 3
@@ -183,6 +190,7 @@ class TestTasks:
         assert data.get("id") == task.id
         assert data.get("assignee_id") == user.id
         assert data.get("team_id") == team.id
+        assert data.get("evaluation") is None
 
     async def test_get_task_401(self, client):
         response = await client.get(
@@ -368,6 +376,275 @@ class TestTasks:
         user, _, access_token = await factory.user(role=UserRole.MANAGER)
         response = await client.delete(
             f"{self.PREFIX}/{'a'}/tasks/{'a'}",
+            headers={"Authorization": f"Bearer {access_token}"},
+        )
+
+        assert response.status_code == 422
+
+    async def test_create_evaluation_201(
+        self,
+        client: AsyncClient,
+        factory,
+        evaluation_create_payload: EvaluationCreateSchema,
+    ):
+        user, _, access_token, task = await factory.user_team_membership_task(
+            UserRole.MANAGER
+        )
+
+        response = await client.post(
+            f"{self.PREFIX_EVALUATION}/{task.id}/evaluation",
+            json=evaluation_create_payload.model_dump(),
+            headers={"Authorization": f"Bearer {access_token}"},
+        )
+
+        assert response.status_code == 201
+
+    async def test_create_evaluation_401(self, client: AsyncClient):
+        response = await client.post(
+            f"{self.PREFIX_EVALUATION}/{1}/evaluation",
+        )
+
+        assert response.status_code == 401
+
+    async def test_create_evaluation_403_role_is_user(
+        self,
+        client: AsyncClient,
+        factory,
+        evaluation_create_payload: EvaluationCreateSchema,
+    ):
+        user, _, access_token, task = await factory.user_team_membership_task(
+            UserRole.USER
+        )
+
+        response = await client.post(
+            f"{self.PREFIX_EVALUATION}/{task.id}/evaluation",
+            json=evaluation_create_payload.model_dump(),
+            headers={"Authorization": f"Bearer {access_token}"},
+        )
+
+        assert response.status_code == 403
+
+        data = response.json()
+        assert data["detail"] == "Manager or admin role required"
+
+    async def test_create_evaluation_403_not_a_team_member(
+        self,
+        client: AsyncClient,
+        factory,
+        evaluation_create_payload: EvaluationCreateSchema,
+    ):
+        user, _, access_token = await factory.user(role=UserRole.MANAGER)
+        team = await factory.team()
+
+        task = await factory.task(
+            team_id=team.id,
+            assignee_id=user.id,
+        )
+
+        response = await client.post(
+            f"{self.PREFIX_EVALUATION}/{task.id}/evaluation",
+            json=evaluation_create_payload.model_dump(),
+            headers={"Authorization": f"Bearer {access_token}"},
+        )
+
+        assert response.status_code == 403
+
+        data = response.json()
+        assert data["detail"] == "User are not a team member"
+
+    async def test_create_evaluation_404(
+        self,
+        client: AsyncClient,
+        factory,
+        evaluation_create_payload: EvaluationCreateSchema,
+    ):
+        user, _, access_token = await factory.user(role=UserRole.MANAGER)
+
+        response = await client.post(
+            f"{self.PREFIX_EVALUATION}/{0}/evaluation",
+            json=evaluation_create_payload.model_dump(),
+            headers={"Authorization": f"Bearer {access_token}"},
+        )
+
+        assert response.status_code == 404
+
+    async def test_create_evaluation_409(
+        self,
+        client: AsyncClient,
+        factory,
+        evaluation_create_payload: EvaluationCreateSchema,
+    ):
+        user, _, access_token, task = await factory.user_team_membership_task(
+            UserRole.MANAGER
+        )
+
+        await factory.evaluation(
+            manager_id=user.id,
+            task_id=task.id,
+        )
+
+        response = await client.post(
+            f"{self.PREFIX_EVALUATION}/{task.id}/evaluation",
+            json=evaluation_create_payload.model_dump(),
+            headers={"Authorization": f"Bearer {access_token}"},
+        )
+
+        assert response.status_code == 409
+
+    async def test_create_evaluation_422(
+        self,
+        client: AsyncClient,
+        factory,
+    ):
+        user, _, access_token, task = await factory.user_team_membership_task(
+            UserRole.MANAGER
+        )
+
+        payload = {"score": 6}
+
+        response = await client.post(
+            f"{self.PREFIX_EVALUATION}/{task.id}/evaluation",
+            json=payload,
+            headers={"Authorization": f"Bearer {access_token}"},
+        )
+
+        assert response.status_code == 422
+
+    async def test_update_evaluation_200(
+        self,
+        client: AsyncClient,
+        factory,
+        evaluation_update_payload: EvaluationUpdateSchema,
+    ):
+        user, _, access_token, task = await factory.user_team_membership_task(
+            UserRole.MANAGER
+        )
+
+        await factory.evaluation(
+            manager_id=user.id,
+            task_id=task.id,
+        )
+
+        response = await client.patch(
+            f"{self.PREFIX_EVALUATION}/{task.id}/evaluation",
+            json=evaluation_update_payload.model_dump(),
+            headers={"Authorization": f"Bearer {access_token}"},
+        )
+
+        assert response.status_code == 200
+
+        data = response.json()
+
+        assert data["score"] == evaluation_update_payload.score
+        assert data["comment"] == evaluation_update_payload.comment
+
+    async def test_update_evaluation_401(self, client: AsyncClient):
+        response = await client.patch(
+            f"{self.PREFIX_EVALUATION}/{1}/evaluation",
+        )
+
+        assert response.status_code == 401
+
+    async def test_update_evaluation_403_role_is_user(
+        self,
+        client: AsyncClient,
+        factory,
+        evaluation_update_payload: EvaluationUpdateSchema,
+    ):
+        user, _, access_token, task = await factory.user_team_membership_task(
+            UserRole.USER
+        )
+
+        response = await client.patch(
+            f"{self.PREFIX_EVALUATION}/{task.id}/evaluation",
+            json=evaluation_update_payload.model_dump(),
+            headers={"Authorization": f"Bearer {access_token}"},
+        )
+
+        assert response.status_code == 403
+
+        data = response.json()
+        assert data["detail"] == "Manager or admin role required"
+
+    async def test_update_evaluation_403_not_a_team_member(
+        self,
+        client: AsyncClient,
+        factory,
+        evaluation_update_payload: EvaluationUpdateSchema,
+    ):
+        user, _, access_token = await factory.user(role=UserRole.MANAGER)
+        team = await factory.team()
+
+        task = await factory.task(
+            team_id=team.id,
+            assignee_id=user.id,
+        )
+
+        response = await client.patch(
+            f"{self.PREFIX_EVALUATION}/{task.id}/evaluation",
+            json=evaluation_update_payload.model_dump(),
+            headers={"Authorization": f"Bearer {access_token}"},
+        )
+
+        assert response.status_code == 403
+
+        data = response.json()
+        assert data["detail"] == "User are not a team member"
+
+    async def test_update_evaluation_404_task_not_found(
+        self,
+        client: AsyncClient,
+        factory,
+        evaluation_update_payload: EvaluationUpdateSchema,
+    ):
+        user, _, access_token = await factory.user(role=UserRole.MANAGER)
+
+        response = await client.patch(
+            f"{self.PREFIX_EVALUATION}/{0}/evaluation",
+            json=evaluation_update_payload.model_dump(),
+            headers={"Authorization": f"Bearer {access_token}"},
+        )
+
+        assert response.status_code == 404
+
+        data = response.json()
+        assert data["detail"] == "Task not found"
+
+    async def test_update_evaluation_404_evaluation_not_found(
+        self,
+        client: AsyncClient,
+        factory,
+        evaluation_update_payload: EvaluationUpdateSchema,
+    ):
+        user, _, access_token, task = await factory.user_team_membership_task(
+            UserRole.MANAGER
+        )
+
+        response = await client.patch(
+            f"{self.PREFIX_EVALUATION}/{task.id}/evaluation",
+            json=evaluation_update_payload.model_dump(),
+            headers={"Authorization": f"Bearer {access_token}"},
+        )
+
+        assert response.status_code == 404
+
+        data = response.json()
+        assert data["detail"] == "Evaluation not found"
+
+    async def test_update_evaluation_422(
+        self,
+        client: AsyncClient,
+        factory,
+    ):
+        user, _, access_token, task = await factory.user_team_membership_task(
+            UserRole.MANAGER
+        )
+
+        payload = {"score": 6}
+
+        response = await client.patch(
+            f"{self.PREFIX_EVALUATION}/{task.id}/evaluation",
+            json=payload,
             headers={"Authorization": f"Bearer {access_token}"},
         )
 

@@ -1,10 +1,11 @@
 from datetime import datetime, timezone
 
 from sqlalchemy import DateTime, Enum, ForeignKey, Text
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.enums import TaskStatus
 from app.models.base import Base
+from app.models.evaluation import EvaluationModel
 
 
 class TaskModel(Base):
@@ -25,3 +26,9 @@ class TaskModel(Base):
         default=lambda: datetime.now(timezone.utc),
     )
     due_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+
+    evaluation: Mapped["EvaluationModel | None"] = relationship(
+        back_populates="task",
+        uselist=False,
+        lazy="selectin",
+    )

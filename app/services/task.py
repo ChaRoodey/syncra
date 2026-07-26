@@ -2,10 +2,18 @@ import logging
 
 from fastapi import HTTPException, status
 
+from app.models.evaluation import EvaluationModel
 from app.models.task import TaskModel
 from app.repositories.task import TaskRepository
 from app.repositories.team import TeamRepository
-from app.schemas.task import TaskCreateSchema, TaskSchema, TaskUpdateSchema
+from app.schemas.task import (
+    EvaluationCreateSchema,
+    EvaluationSchema,
+    EvaluationUpdateSchema,
+    TaskCreateSchema,
+    TaskSchema,
+    TaskUpdateSchema,
+)
 from app.services.permissions.task import TaskPermissionService
 from app.services.permissions.team import TeamPermissionService
 
@@ -80,4 +88,35 @@ class TaskService:
     async def delete_task(self, team_id: int, task_id: int, curr_user_id: int) -> None:
         await self.team_permission.require_membership(team_id, curr_user_id)
         await self.task_permission.require_task(team_id, task_id)
+
         await self.task_repo.delete_task(team_id, task_id)
+
+    async def create_evaluation(
+        self, task_id: int, curr_user_id: int, data: EvaluationCreateSchema
+    ) -> EvaluationSchema:
+        task = await self.task_permission.require_task_by_id(task_id)
+        await self.team_permission.require_membership(task.team_id, curr_user_id)
+        await self.task_permission.require_evaluation_doesnt_exist(task)
+
+        evaluation = await self.task_repo.create_evaluation(
+            EvaluationModel(
+                manager_id=curr_user_id,
+                task_id=task_id,
+                **data.model_dump(),
+            )
+        )
+
+        return EvaluationSchema.model_validate(evaluation)
+
+    async def update_evaluation(
+        self, task_id: int, curr_user_id: int, data: EvaluationUpdateSchema
+    ) -> EvaluationSchema:
+        task = await self.task_permission.require_task_by_id(task_id)
+        await self.team_permission.require_membership(task.team_id, curr_user_id)
+        await self.task_permission.require_evaluation_exist(task)
+
+        evaluation = await self.task_repo.update_evaluation(
+            curr_user_id, task_id, data.model_dump(exclude_none=True)
+        )
+
+        return EvaluationSchema.model_validate(evaluation)

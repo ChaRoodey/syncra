@@ -26,7 +26,12 @@ from app.models.team import TeamModel
 from app.models.team_member import TeamMemberModel
 from app.models.user import UserModel
 from app.schemas.meeting import MeetingCreateSchema, MeetingUpdateSchema
-from app.schemas.task import TaskCreateSchema, TaskUpdateSchema
+from app.schemas.task import (
+    EvaluationCreateSchema,
+    EvaluationUpdateSchema,
+    TaskCreateSchema,
+    TaskUpdateSchema,
+)
 from app.schemas.task_comment import TaskCommentCreateSchema, TaskCommentUpdateSchema
 from app.schemas.team import TeamNameSchema
 
@@ -203,9 +208,7 @@ async def meeting_factory(db_session: AsyncSession):
             ends_at=ends_at,
         )
 
-        db_session.add(meeting)
-        await db_session.flush()
-        return meeting
+        return await add_entity(meeting)
 
     return create_meeting
 
@@ -251,8 +254,16 @@ async def comment_factory(db_session: AsyncSession):
 async def evaluation_factory(db_session: AsyncSession):
     add_entity = entity_factory(db_session)
 
-    async def create_evaluation() -> EvaluationModel:
-        evaluation = EvaluationModel(...)
+    async def create_evaluation(
+        manager_id: int = 1,
+        task_id: int = 1,
+    ) -> EvaluationModel:
+        evaluation = EvaluationModel(
+            manager_id=manager_id,
+            task_id=task_id,
+            score=4,
+            comment="comment",
+        )
 
         return await add_entity(evaluation)
 
@@ -402,3 +413,19 @@ def task_comment_create_payload() -> TaskCommentCreateSchema:
 @pytest.fixture
 def task_comment_update_payload() -> TaskCommentUpdateSchema:
     return TaskCommentUpdateSchema(text="comment")
+
+
+@pytest.fixture
+def evaluation_create_payload() -> EvaluationCreateSchema:
+    return EvaluationCreateSchema(
+        score=5,
+        comment="comment",
+    )
+
+
+@pytest.fixture
+def evaluation_update_payload() -> EvaluationUpdateSchema:
+    return EvaluationUpdateSchema(
+        score=2,
+        comment="comment",
+    )

@@ -31,3 +31,17 @@ class TaskPermissionService:
             raise TaskNotFoundException
 
         return task
+
+    async def require_evaluation_exist(self, task: TaskModel) -> None:
+        if task.evaluation is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Evaluation not found",
+            )
+
+    async def require_evaluation_doesnt_exist(self, task: TaskModel) -> None:
+        if task.evaluation is not None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Evaluation already exists",
+            )
