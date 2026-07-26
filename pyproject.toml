@@ -50,5 +50,6 @@ markers = [
     "tasks: tasks integration tests",
     "meetings: meetings integration tests",
     "comments: task_comments integration tests",
+    "calendar: calendar integration tests",
     "solo: for solo tests",
 ]

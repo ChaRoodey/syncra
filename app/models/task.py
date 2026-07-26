@@ -5,7 +5,6 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.enums import TaskStatus
 from app.models.base import Base
-from app.models.evaluation import EvaluationModel
 
 
 class TaskModel(Base):

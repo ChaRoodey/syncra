@@ -14,6 +14,7 @@ from app.repositories.team import TeamRepository
 from app.repositories.user import UserRepository
 from app.schemas.token import TokenPayload
 from app.services.auth import AuthService
+from app.services.calendar import CalendarService
 from app.services.meeting import MeetingService
 from app.services.permissions.meeting import MeetingPermissionService
 from app.services.permissions.task import TaskPermissionService
@@ -138,6 +139,16 @@ async def get_task_comment_service(
         team_permission,
         task_permission,
         task_comment_permission,
+    )
+
+
+async def get_calendar_service(
+    task_repo: TaskRepository = Depends(get_task_repository),
+    meeting_repo: MeetingRepository = Depends(get_meeting_repository),
+) -> CalendarService:
+    return CalendarService(
+        task_repo,
+        meeting_repo,
     )
 
 

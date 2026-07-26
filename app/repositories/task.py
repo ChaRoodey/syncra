@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 
 from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -46,6 +47,21 @@ class TaskRepository:
             select(TaskModel)
             .options(selectinload(TaskModel.evaluation))
             .where(TaskModel.team_id == team_id)
+        )
+        result = await self.session.execute(stmt)
+        return list(result.scalars())
+
+    async def get_all_tasks_by_assignee_id(
+        self, assignee_id: int, start: datetime, end: datetime
+    ) -> list[TaskModel]:
+        stmt = (
+            select(TaskModel)
+            .options(selectinload(TaskModel.evaluation))
+            .where(
+                TaskModel.assignee_id == assignee_id,
+                TaskModel.due_date >= start,
+                TaskModel.due_date <= end,
+            )
         )
         result = await self.session.execute(stmt)
         return list(result.scalars())

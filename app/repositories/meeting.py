@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 
 from sqlalchemy import delete, exists, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -31,6 +32,21 @@ class MeetingRepository:
 
     async def get_all_meetings(self, team_id: int) -> list[MeetingModel] | None:
         stmt = select(MeetingModel).where(MeetingModel.team_id == team_id)
+        result = await self.session.execute(stmt)
+        return list(result.scalars())
+
+    async def get_all_meetings_by_participant_id(
+        self, participant_id: int, start: datetime, end: datetime
+    ) -> list[MeetingModel] | None:
+        stmt = (
+            select(MeetingModel)
+            .join(MeetingParticipantModel)
+            .where(
+                MeetingParticipantModel.user_id == participant_id,
+                MeetingModel.starts_at <= end,
+                MeetingModel.ends_at >= start,
+            )
+        )
         result = await self.session.execute(stmt)
         return list(result.scalars())
 
