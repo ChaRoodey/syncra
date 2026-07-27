@@ -42,7 +42,7 @@ services:
 
   backend:
     build:
-      context: .
+      context: ./backend
       dockerfile: Dockerfile
     container_name: syncra_backend
     env_file:
@@ -52,6 +52,24 @@ services:
         condition: service_healthy
     ports:
       - "8000:8000"
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/api/v1/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - syncra_net
+
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: syncra_frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
     networks:
       - syncra_net
 

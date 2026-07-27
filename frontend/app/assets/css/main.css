@@ -1,0 +1,43 @@
+:root {
+  --primary-color: #e91e63;
+  --primary-light: #ff80ab;
+  --background-start: #ffe4ec;
+  --background-end: #ec407a;
+}
+
+
+html,
+body,
+#__nuxt {
+  min-height: 100%;
+  margin: 0;
+}
+
+
+body {
+  background: linear-gradient(
+    135deg,
+    var(--background-start),
+    var(--background-end)
+  );
+
+  min-height: 100vh;
+}
+
+.ant-card {
+  background: rgba(255, 255, 255, 0.85) !important;
+
+  backdrop-filter: blur(12px);
+
+  border-radius: 16px !important;
+}
+
+a {
+  color: #e91e63;
+  text-decoration: none;
+}
+
+
+a:hover {
+  color: #ad1457;
+}
