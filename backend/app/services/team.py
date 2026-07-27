@@ -58,7 +58,11 @@ class TeamService:
     async def join(self, user_id: int, data: TeamInviteCodeSchema) -> None:
         team = await self.team_repo.get_by_invite_code(data.invite_code)
 
-        await self.team_permission.require_team(team.id)
+        if team is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Team does not exist",
+            )
 
         if await self.team_repo.is_member(team.id, user_id):
             raise HTTPException(

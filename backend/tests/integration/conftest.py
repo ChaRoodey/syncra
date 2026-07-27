@@ -1,6 +1,10 @@
 import os
+from pathlib import Path
 
-os.environ["ENV_FILE"] = ".env.test"
+BACKEND_DIR = Path(__file__).resolve().parents[2]
+PROJECT_ROOT = BACKEND_DIR.parent
+
+os.environ["ENV_FILE"] = str(PROJECT_ROOT / ".env.test")
 
 from datetime import datetime, timedelta
 from typing import AsyncGenerator, TypeVar
@@ -41,17 +45,18 @@ engine_test = create_async_engine(TEST_DATABASE_URL, echo=False)
 SessionTest = async_sessionmaker(engine_test, expire_on_commit=False)
 
 EntityT = TypeVar("EntityT", bound=Base)
+ALEMBIC_INI = BACKEND_DIR / "alembic.ini"
 
 
 @pytest.fixture(scope="session", autouse=True)
 def apply_migrations():
-    alembic_cfg = Config("alembic.ini")
+    alembic_cfg = Config(str(ALEMBIC_INI))
+    db_url = "postgresql+asyncpg://syncra_test_user:syncra_test_password@localhost:5533/syncra_test_db"
 
     alembic_cfg.set_main_option(
         "sqlalchemy.url",
-        "postgresql+asyncpg://syncra_test_user:syncra_test_password@localhost:5533/syncra_test_db",
+        db_url,
     )
-
     command.upgrade(alembic_cfg, "head")
 
     yield
@@ -78,7 +83,7 @@ async def db_session() -> AsyncSession:
 
 @pytest_asyncio.fixture
 async def client(
-    db_session: AsyncSession,
+        db_session: AsyncSession,
 ) -> AsyncGenerator[AsyncClient, None]:
     async def override_get_db_session():
         yield db_session
@@ -86,8 +91,8 @@ async def client(
     app.dependency_overrides[get_db_session] = override_get_db_session
 
     async with AsyncClient(
-        transport=ASGITransport(app=app),
-        base_url="http://test",
+            transport=ASGITransport(app=app),
+            base_url="http://test",
     ) as client:
         yield client
 
@@ -109,10 +114,10 @@ async def user_factory(db_session: AsyncSession):
     add_entity = entity_factory(db_session)
 
     async def create_user(
-        role: UserRole = UserRole.USER,
-        username: str = "user",
-        password: str = "password",
-        is_active: bool = True,
+            role: UserRole = UserRole.USER,
+            username: str = "user",
+            password: str = "password",
+            is_active: bool = True,
     ) -> (UserModel, str, str):
         user = UserModel(
             username=username,
@@ -138,8 +143,8 @@ async def team_factory(db_session: AsyncSession):
     add_entity = entity_factory(db_session)
 
     async def create_team(
-        name: str = "team",
-        invite_code: str = "aaaaaaaaaaaaaaaaaaaaaa",
+            name: str = "team",
+            invite_code: str = "aaaaaaaaaaaaaaaaaaaaaa",
     ) -> TeamModel:
         team = TeamModel(name=name, invite_code=invite_code)
 
@@ -153,8 +158,8 @@ async def team_member_factory(db_session: AsyncSession):
     add_entity = entity_factory(db_session)
 
     async def create_team_member(
-        team_id: int,
-        user_id: int,
+            team_id: int,
+            user_id: int,
     ) -> TeamMemberModel:
         team_member = TeamMemberModel(team_id=team_id, user_id=user_id)
 
@@ -168,12 +173,12 @@ async def task_factory(db_session: AsyncSession):
     add_entity = entity_factory(db_session)
 
     async def create_task(
-        title: str = "task",
-        description: str = "description",
-        assignee_id: int = 1,
-        team_id: int = 1,
-        status: TaskStatus = TaskStatus.OPEN,
-        due_date: datetime = datetime.now() + timedelta(days=1),
+            title: str = "task",
+            description: str = "description",
+            assignee_id: int = 1,
+            team_id: int = 1,
+            status: TaskStatus = TaskStatus.OPEN,
+            due_date: datetime = datetime.now() + timedelta(days=1),
     ) -> TaskModel:
         task = TaskModel(
             title=title,
@@ -194,11 +199,11 @@ async def meeting_factory(db_session: AsyncSession):
     add_entity = entity_factory(db_session)
 
     async def create_meeting(
-        team_id: int = 1,
-        author_id: int = 1,
-        title: str = "meeting",
-        starts_at: datetime = datetime.now() + timedelta(days=1),
-        ends_at: datetime = datetime.now() + timedelta(days=1, hours=1),
+            team_id: int = 1,
+            author_id: int = 1,
+            title: str = "meeting",
+            starts_at: datetime = datetime.now() + timedelta(days=1),
+            ends_at: datetime = datetime.now() + timedelta(days=1, hours=1),
     ) -> MeetingModel:
         meeting = MeetingModel(
             team_id=team_id,
@@ -218,8 +223,8 @@ async def meeting_participant_factory(db_session: AsyncSession):
     add_entity = entity_factory(db_session)
 
     async def create_meeting_participant(
-        meeting_id: int,
-        user_id: int,
+            meeting_id: int,
+            user_id: int,
     ) -> MeetingParticipantModel:
         meeting_participant = MeetingParticipantModel(
             meeting_id=meeting_id, user_id=user_id
@@ -235,9 +240,9 @@ async def comment_factory(db_session: AsyncSession):
     add_entity = entity_factory(db_session)
 
     async def create_task_comment(
-        task_id: int,
-        author_id: int,
-        text: str = "comment",
+            task_id: int,
+            author_id: int,
+            text: str = "comment",
     ) -> TaskCommentModel:
         task_comment = TaskCommentModel(
             task_id=task_id,
@@ -255,8 +260,8 @@ async def evaluation_factory(db_session: AsyncSession):
     add_entity = entity_factory(db_session)
 
     async def create_evaluation(
-        manager_id: int = 1,
-        task_id: int = 1,
+            manager_id: int = 1,
+            task_id: int = 1,
     ) -> EvaluationModel:
         evaluation = EvaluationModel(
             manager_id=manager_id,
@@ -272,14 +277,14 @@ async def evaluation_factory(db_session: AsyncSession):
 
 @pytest_asyncio.fixture
 async def factory(
-    user_factory,
-    team_factory,
-    team_member_factory,
-    task_factory,
-    meeting_factory,
-    meeting_participant_factory,
-    comment_factory,
-    evaluation_factory,
+        user_factory,
+        team_factory,
+        team_member_factory,
+        task_factory,
+        meeting_factory,
+        meeting_participant_factory,
+        comment_factory,
+        evaluation_factory,
 ):
     class Factory:
         def __init__(self):
@@ -293,8 +298,8 @@ async def factory(
             self.evaluation = evaluation_factory
 
         async def user_team_membership(
-            self,
-            curr_user_role: UserRole = UserRole.USER,
+                self,
+                curr_user_role: UserRole = UserRole.USER,
         ):
             user, _, token = await self.user(role=curr_user_role)
             team = await self.team()

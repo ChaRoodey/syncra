@@ -17,7 +17,7 @@ class TestAuth:
         }
 
         response = await client.post(
-            f"{self.PREFIX}/register/",
+            f"{self.PREFIX}/register",
             json=payload,
         )
 
@@ -33,12 +33,12 @@ class TestAuth:
         }
 
         await client.post(
-            f"{self.PREFIX}/register/",
+            f"{self.PREFIX}/register",
             json=payload,
         )
 
         response2 = await client.post(
-            f"{self.PREFIX}/register/",
+            f"{self.PREFIX}/register",
             json=payload,
         )
 
@@ -75,7 +75,7 @@ class TestAuth:
     )
     async def test_register_422(self, client: AsyncClient, payload: dict):
         response = await client.post(
-            f"{self.PREFIX}/register/",
+            f"{self.PREFIX}/register",
             json=payload,
         )
 
@@ -85,7 +85,7 @@ class TestAuth:
         user, password, _ = await factory.user()
 
         response = await client.post(
-            f"{self.PREFIX}/login/",
+            f"{self.PREFIX}/login",
             json={
                 "username": user.username,
                 "password": password,
@@ -119,7 +119,7 @@ class TestAuth:
     )
     async def test_login_401(self, client: AsyncClient, payload: dict):
         response = await client.post(
-            f"{self.PREFIX}/login/",
+            f"{self.PREFIX}/login",
             json=payload,
         )
 
@@ -128,7 +128,7 @@ class TestAuth:
     async def test_refresh_200(self, client: AsyncClient, refresh_token: str):
         client.cookies.set("refresh_token", refresh_token)
 
-        response = await client.post(f"{self.PREFIX}/refresh/")
+        response = await client.post(f"{self.PREFIX}/refresh")
 
         assert response.status_code == 200
 
@@ -140,6 +140,6 @@ class TestAuth:
     async def test_refresh_401(self, client: AsyncClient, refresh_token: str):
         client.cookies.set("refresh_token", "invalid-token")
 
-        response = await client.post(f"{self.PREFIX}/refresh/")
+        response = await client.post(f"{self.PREFIX}/refresh")
 
         assert response.status_code == 401

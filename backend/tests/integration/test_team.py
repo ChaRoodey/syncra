@@ -77,7 +77,8 @@ class TestTeams:
         team = await factory.team()
 
         response = await client.post(
-            f"{self.PREFIX}/{team.id}/join",
+            f"{self.PREFIX}/join",
+            json={"invite_code": team.invite_code},
             headers={"Authorization": f"Bearer {access_token}"},
         )
 
@@ -87,7 +88,7 @@ class TestTeams:
         team = await factory.team()
 
         response = await client.post(
-            f"{self.PREFIX}/{team.id}/join",
+            f"{self.PREFIX}/join",
         )
 
         assert response.status_code == 401
@@ -96,7 +97,8 @@ class TestTeams:
         _, _, access_token = await factory.user()
 
         response = await client.post(
-            f"{self.PREFIX}/{0}/join",
+            f"{self.PREFIX}/join",
+            json={"invite_code": 'aaaaaaaaaaaaaaaaaaaaaa'},
             headers={"Authorization": f"Bearer {access_token}"},
         )
 
@@ -107,12 +109,14 @@ class TestTeams:
         team = await factory.team()
 
         await client.post(
-            f"{self.PREFIX}/{team.id}/join",
+            f"{self.PREFIX}/join",
+            json={"invite_code": team.invite_code},
             headers={"Authorization": f"Bearer {access_token}"},
         )
 
         response = await client.post(
-            f"{self.PREFIX}/{team.id}/join",
+            f"{self.PREFIX}/join",
+            json={"invite_code": team.invite_code},
             headers={"Authorization": f"Bearer {access_token}"},
         )
 

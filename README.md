@@ -41,7 +41,6 @@ Syncra — MVP система управления командами.
 - Docker
 - Docker Compose
 
-
 # Запуск проекта
 
 ## Требования
@@ -50,7 +49,6 @@ Syncra — MVP система управления командами.
 
 - Docker
 - Docker Compose
-
 
 ## Структура проекта
 
@@ -73,11 +71,13 @@ syncra
 ```
 
 Этот пользователь может протестировать весь функционал приложения:
+
 - создание команд;
 - создание задач;
 - проведение встреч;
 - оценку задач;
 - управление участниками команды.
+
 ## Доступ к ресурсам после запуска
 
 Frontend:
@@ -105,6 +105,7 @@ cp .env.example .env
 ```
 
 Создать ключи для jwt
+
 ```bash
 mkdir certs
 
@@ -119,3 +120,38 @@ openssl rsa -in certs/jwt-private.pem -pubout -out certs/jwt-public.pem
 docker compose up --build
 ```
 
+# Запуск тестов
+
+Для запуска интеграционных тестов необходимо поднять только тестовую базу PostgreSQL.
+
+1. Создать и заполнить файл `.env.test` в корне проекта.
+
+Пример:
+
+```env
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5533
+POSTGRES_DB=syncra_test_db
+POSTGRES_USER=syncra_test_user
+POSTGRES_PASSWORD=syncra_test_password
+```
+
+2. Запустить контейнер:
+
+```bash
+docker compose up -d postgres_test
+```
+
+3. Перейти в директорию backend:
+
+```bash
+cd backend
+```
+
+4. Запустить тесты:
+
+```bash
+uv run pytest
+```
+
+Перед запуском тестов автоматически выполняются миграции Alembic в тестовую базу данных.
